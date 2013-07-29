@@ -2,7 +2,7 @@
 #load "ConfigurationClasses.csx"
 using Microsoft.Web.Administration;
 
-var siteConfiguration = SiteConfiguration.Create("Test2", @"c:\tmp", 8989);
+var siteConfiguration = SiteConfiguration.Create("Test2", @"c:\tmp", 8989).WithHttpBinding("*", 9999, "*");
 siteConfiguration.WithApplicationPool("Dummy");
 var appConfig = siteConfiguration.WithApplication("Yo", @"c:\tmp");
 var appConfig2 = appConfig.WithApplication("Ohoy", @"c:\tmp");

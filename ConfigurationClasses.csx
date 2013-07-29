@@ -1,6 +1,7 @@
 #r "c:\windows\System32\inetsrv\Microsoft.Web.Administration.dll"
 
 using Microsoft.Web.Administration;
+using System.Collections.Generic;
 
 public class AppPoolConfiguration
 {
@@ -87,10 +88,51 @@ public class ApplicationConfiguration : IParentConfiguration
 	}
 }
 
+public abstract class SiteBindingConfiguration
+{
+	private string _ip;
+	private string _hostHeader;
+	private int _port;
+
+	protected string BindingInformation
+	{
+		get
+		{
+			return string.Format("{0}:{1}:{2}", _ip, _port, _hostHeader);
+		}
+	}
+
+	public static SiteBindingConfiguration CreateHttpBinding(string ip, int port, string hostHeader)
+	{
+		return new HttpBindingConfiguration(ip, port, hostHeader);
+	}
+
+	public SiteBindingConfiguration(string ip, int port, string hostHeader)
+	{
+		_ip = ip;
+		_port = port;
+		_hostHeader = hostHeader;
+	}
+
+	public abstract void DoSetup(ServerManager serverManager, Site site);
+
+	private class HttpBindingConfiguration : SiteBindingConfiguration
+	{
+		public HttpBindingConfiguration(string ip, int port, string hostHeader) : base(ip, port, hostHeader)
+		{}
+
+		public override void DoSetup(ServerManager serverManager, Site site)
+		{
+			site.Bindings.Add(BindingInformation, "http");
+		}
+	}
+}
+
 public class SiteConfiguration : IParentConfiguration
 {
 	private AppPoolConfiguration _appPoolConfig;
 	private ApplicationConfiguration _application;
+	private List<SiteBindingConfiguration> _bindings = new List<SiteBindingConfiguration>();
 	private string _siteName;
 	private string _filePath;
 	private int _port;
@@ -123,6 +165,13 @@ public class SiteConfiguration : IParentConfiguration
 		return _application;
 	}
 
+	public SiteConfiguration WithHttpBinding(string ip, int port, string hostHeader)
+	{
+		var bindingConfiguration = SiteBindingConfiguration.CreateHttpBinding(ip, port, hostHeader);
+		_bindings.Add(bindingConfiguration);
+		return this;
+	}
+
 	public void DoSetup(ServerManager serverManager)
 	{
 		var sites = serverManager.Sites;
@@ -146,6 +195,15 @@ public class SiteConfiguration : IParentConfiguration
 		if(_application != null)
 		{
 			_application.DoSetup(serverManager, site);
+		}
+
+		if(_bindings.Count > 0)
+		{
+			site.Bindings.Clear();
+			foreach(var bindingConfiguration in _bindings)
+			{
+				bindingConfiguration.DoSetup(serverManager, site);
+			}
 		}
 	}
 }
