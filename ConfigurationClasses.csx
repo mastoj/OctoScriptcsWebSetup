@@ -1,209 +1,239 @@
 #r "c:\windows\System32\inetsrv\Microsoft.Web.Administration.dll"
+#r "System.Web.Extensions"
 
+using System.Web.Script.Serialization;
 using Microsoft.Web.Administration;
 using System.Collections.Generic;
 
 public class AppPoolConfiguration
 {
-	private string _appPoolName;
-	public static AppPoolConfiguration Create(string appPoolName)
-	{
-		return new AppPoolConfiguration(appPoolName);
-	}
+	public string AppPoolName { get; set; }
 
-	private AppPoolConfiguration(string appPoolName)
-	{
-		_appPoolName = appPoolName;
-	}
+//	public static AppPoolConfiguration Create(string appPoolName)
+//	{
+//		return new AppPoolConfiguration(appPoolName);
+//	}
+
+//	private AppPoolConfiguration(string appPoolName)
+//	{
+//		_appPoolName = appPoolName;
+//	}
 
 	public void DoSetup(ServerManager serverManager)
 	{
-		if(serverManager.ApplicationPools[_appPoolName] == null)
+		if(serverManager.ApplicationPools[AppPoolName] == null)
 		{
-			Console.WriteLine("Adding application pool: " + _appPoolName); 
-			serverManager.ApplicationPools.Add(_appPoolName);
+			Console.WriteLine("Adding application pool: " + AppPoolName); 
+			serverManager.ApplicationPools.Add(AppPoolName);
 		}
 		else
 		{
-			Console.WriteLine("Application pool exists: " + _appPoolName);
+			Console.WriteLine("Application pool exists: " + AppPoolName);
 		}	
 	}
 }
 
-public interface IParentConfiguration
+public abstract class ApplicationBaseConfiguration
 {
-	string RootName { get; }
-	string ServerPath { get; }
+	public string ServerPath { get; set; }
+	public AppPoolConfiguration AppPoolConfig { get; set; }
+	public string FilePath { get; set; }
+
+	private List<ApplicationConfiguration> _applications;
+	public List<ApplicationConfiguration> Applications 
+	{ 
+		get
+		{
+			_applications = _applications ?? new List<ApplicationConfiguration>();
+			return _applications;
+		} 
+		set
+		{
+			_applications = value;
+		} 
+	}
+
+	public virtual void DoSetup(ServerManager serverManager, Site site, ApplicationBaseConfiguration parentConfig)
+	{
+		if(AppPoolConfig != null)
+		{
+			AppPoolConfig.DoSetup(serverManager);
+		}
+		foreach(var child in Applications)
+		{
+			child.DoSetup(serverManager, site, this);
+		}
+	}
 }
 
-public class ApplicationConfiguration : IParentConfiguration
+public class ApplicationConfiguration : ApplicationBaseConfiguration
 {
-	private string _applicationName;
-	private string _applicationPath;
-	private IParentConfiguration _parentConfiguration;
-	private AppPoolConfiguration _appPoolConfig;
-	private ApplicationConfiguration _child;
+	public string ApplicationName { get; set; }
 
-	public string RootName { get { return _parentConfiguration.RootName; }}
+//	public static ApplicationConfiguration Create(string applicationName, string applicationPath, AppPoolConfiguration appPoolConfig, IParentConfiguration parentConfiguration)
+//	{ 
+//		return new ApplicationConfiguration(applicationName, applicationPath, appPoolConfig, parentConfiguration);
+//	}
 
-	public string ServerPath { get { return _parentConfiguration.ServerPath + "/" + _applicationName; }}
+//	public ApplicationConfiguration(string applicationName, string applicationPath, AppPoolConfiguration appPoolConfig, IParentConfiguration parentConfiguration)
+//	{
+//		_applicationName = applicationName;
+//		_applicationPath = applicationPath;
+//		_appPoolConfig = appPoolConfig;
+//		_parentConfiguration = parentConfiguration;
+//	}
 
-	public static ApplicationConfiguration Create(string applicationName, string applicationPath, AppPoolConfiguration appPoolConfig, IParentConfiguration parentConfiguration)
-	{ 
-		return new ApplicationConfiguration(applicationName, applicationPath, appPoolConfig, parentConfiguration);
-	}
+//	public ApplicationConfiguration WithApplication(string applicationName, string applicationPath)
+//	{
+//		_child = ApplicationConfiguration.Create(applicationName, applicationPath, _appPoolConfig, this);
+//		return _child;
+//	}
 
-	public ApplicationConfiguration(string applicationName, string applicationPath, AppPoolConfiguration appPoolConfig, IParentConfiguration parentConfiguration)
+	public override void DoSetup(ServerManager serverManager, Site site, ApplicationBaseConfiguration parentConfig)
 	{
-		_applicationName = applicationName;
-		_applicationPath = applicationPath;
-		_appPoolConfig = appPoolConfig;
-		_parentConfiguration = parentConfiguration;
-	}
-
-	public ApplicationConfiguration WithApplication(string applicationName, string applicationPath)
-	{
-		_child = ApplicationConfiguration.Create(applicationName, applicationPath, _appPoolConfig, this);
-		return _child;
-	}
-
-	public void DoSetup(ServerManager serverManager, Site site)
-	{
-		if(_appPoolConfig != null)
-		{
-			_appPoolConfig.DoSetup(serverManager);
-		}
-
 		var appCollection = site.Applications;
+		ServerPath = parentConfig.ServerPath + "/" + ApplicationName; 
 		if(appCollection[ServerPath] == null)
 		{
-			Console.WriteLine("Adding application: " + _applicationName);
-			var add = appCollection.Add(ServerPath, _applicationPath);
+			Console.WriteLine("Adding application: " + ApplicationName);
+			var add = appCollection.Add(ServerPath, FilePath);
 		}
-
-		if(_child != null)
-		{
-			_child.DoSetup(serverManager, site);
-		}
+		base.DoSetup(serverManager, site, this);
 	}
 }
 
 public abstract class SiteBindingConfiguration
 {
-	private string _ip;
-	private string _hostHeader;
-	private int _port;
+	public string Ip { get; set; }
+	public int Port { get; set; }
+	public string HostHeader { get; set; }
+	public string Protocol { get; set; }
 
 	protected string BindingInformation
 	{
 		get
 		{
-			return string.Format("{0}:{1}:{2}", _ip, _port, _hostHeader);
+			return string.Format("{0}:{1}:{2}", Ip, Port, HostHeader);
 		}
 	}
 
-	public static SiteBindingConfiguration CreateHttpBinding(string ip, int port, string hostHeader)
+//	public static SiteBindingConfiguration CreateHttpBinding(string ip, int port, string hostHeader)
+//	{
+//		return new HttpBindingConfiguration(ip, port, hostHeader);
+//	}
+
+//	public SiteBindingConfiguration(string ip, int port, string hostHeader)
+//	{
+//		_ip = ip;
+//		_port = port;
+//		_hostHeader = hostHeader;
+//	}
+
+	public void DoSetup(ServerManager serverManager, Site site)
 	{
-		return new HttpBindingConfiguration(ip, port, hostHeader);
+		site.Bindings.Add(BindingInformation, Protocol);		
 	}
 
-	public SiteBindingConfiguration(string ip, int port, string hostHeader)
-	{
-		_ip = ip;
-		_port = port;
-		_hostHeader = hostHeader;
-	}
+//	private class HttpBindingConfiguration : SiteBindingConfiguration
+//	{
+//		public HttpBindingConfiguration(string ip, int port, string hostHeader) : base(ip, port, hostHeader)
+//		{}
 
-	public abstract void DoSetup(ServerManager serverManager, Site site);
-
-	private class HttpBindingConfiguration : SiteBindingConfiguration
-	{
-		public HttpBindingConfiguration(string ip, int port, string hostHeader) : base(ip, port, hostHeader)
-		{}
-
-		public override void DoSetup(ServerManager serverManager, Site site)
-		{
-			site.Bindings.Add(BindingInformation, "http");
-		}
-	}
+//		public override void DoSetup(ServerManager serverManager, Site site)
+//		{
+//			site.Bindings.Add(BindingInformation, "http");
+//		}
+//	}
 }
 
-public class SiteConfiguration : IParentConfiguration
+public class SiteConfiguration : ApplicationBaseConfiguration
 {
-	private AppPoolConfiguration _appPoolConfig;
-	private ApplicationConfiguration _application;
-	private List<SiteBindingConfiguration> _bindings = new List<SiteBindingConfiguration>();
-	private string _siteName;
-	private string _filePath;
-	private int _port;
-
-	public string RootName { get { return _siteName; } }
-
-	public string ServerPath { get { return ""; } }
-
-	public static SiteConfiguration Create(string siteName, string filePath, int port)
+	public SiteConfiguration()
 	{
-		return new SiteConfiguration(siteName, filePath, port);
+		ServerPath = "";
 	}
 
-	public SiteConfiguration(string siteName, string filePath, int port)
-	{
-		_siteName = siteName;
-		_filePath = filePath;
-		_port = port;
+	private List<SiteBindingConfiguration> _bindings;
+	public List<SiteBindingConfiguration> Bindings 
+	{ 
+		get
+		{
+			_bindings = _bindings ?? new List<SiteBindingConfiguration>();
+			return _bindings;
+		} 
+		set
+		{
+			_bindings = value;
+		} 
 	}
 
-	public AppPoolConfiguration WithApplicationPool(string name)
-	{
-		_appPoolConfig = AppPoolConfiguration.Create(name);
-		return _appPoolConfig;
-	}
+	public string SiteName { get; set; }
+	public int Port { get; set; }
 
-	public ApplicationConfiguration WithApplication(string applicationName, string applicationPath)
-	{
-		_application = ApplicationConfiguration.Create(applicationName, applicationPath, _appPoolConfig, this);
-		return _application;
-	}
 
-	public SiteConfiguration WithHttpBinding(string ip, int port, string hostHeader)
-	{
-		var bindingConfiguration = SiteBindingConfiguration.CreateHttpBinding(ip, port, hostHeader);
-		_bindings.Add(bindingConfiguration);
-		return this;
-	}
+//	public static SiteConfiguration Create(string siteName, string filePath, int port)
+//	{
+//		return new SiteConfiguration(siteName, filePath, port);
+//	}
+
+//	public SiteConfiguration(string siteName, string filePath, int port)
+//	{
+//		_siteName = siteName;
+//		_filePath = filePath;
+//		_port = port;
+//	}
+
+//	public AppPoolConfiguration WithApplicationPool(string name)
+//	{
+//		_appPoolConfig = AppPoolConfiguration.Create(name);
+//		return _appPoolConfig;
+//	}
+
+//	public ApplicationConfiguration WithApplication(string applicationName, string applicationPath)
+//	{
+//		_application = ApplicationConfiguration.Create(applicationName, applicationPath, _appPoolConfig, this);
+//		return _application;
+//	}
+
+//	public SiteConfiguration WithHttpBinding(string ip, int port, string hostHeader)
+//	{
+//		var bindingConfiguration = SiteBindingConfiguration.CreateHttpBinding(ip, port, hostHeader);
+//		_bindings.Add(bindingConfiguration);
+//		return this;
+//	}
 
 	public void DoSetup(ServerManager serverManager)
 	{
 		var sites = serverManager.Sites;
 		Site site;
-		if(_appPoolConfig != null)
-		{
-			_appPoolConfig.DoSetup(serverManager);
-		}
 
-		site = sites[_siteName];
+		site = sites[SiteName];
 		if(site == null)
 		{
-			Console.WriteLine("Adding site: " + _siteName);
-			site = sites.Add(_siteName, _filePath, _port);
+			Console.WriteLine("Adding site: " + SiteName);
+			site = sites.Add(SiteName, FilePath, Port);
 		}
 		else
 		{
-			Console.WriteLine("Site exists: " + _siteName);
+			Console.WriteLine("Site exists: " + SiteName);
 		}
-
-		if(_application != null)
-		{
-			_application.DoSetup(serverManager, site);
-		}
-
-		if(_bindings.Count > 0)
+		if(Bindings.Count > 0)
 		{
 			site.Bindings.Clear();
-			foreach(var bindingConfiguration in _bindings)
+			foreach(var bindingConfiguration in Bindings)
 			{
 				bindingConfiguration.DoSetup(serverManager, site);
 			}
 		}
+		base.DoSetup(serverManager, site, this);
+	}
+}
+
+public static class Parser
+{
+	public static SiteConfiguration ParseJson(string json)
+	{
+		var jSerialize = new JavaScriptSerializer();
+		return jSerialize.Deserialize<SiteConfiguration>(json);
 	}
 }
