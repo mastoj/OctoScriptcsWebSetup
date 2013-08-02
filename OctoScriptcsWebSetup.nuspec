@@ -15,7 +15,7 @@
         </dependencies>
     </metadata>
     <files>
-        <file src="DeployScripts\example.config.json" target="content\DeployScripts\configs\example.config.ps1" />
+        <file src="DeployScripts\example.config.json" target="content\DeployScripts\configs\example.config.json" />
         <file src="DeployScripts\ConfigurationClasses.csx" target="content\DeployScripts\ExampleScript.csx" />
         <file src="DeployScripts\DoConfig.csx" target="content\DeployScripts\DoConfig.csx" />
         <file src="OctoScripts\PreDeploy.csx" target="content\PreDeploy.csx" />
