@@ -10,15 +10,15 @@
         <description>Scriptcs setup scripts for IIS to use with Octopus</description>
         <releaseNotes />
         <copyright>Copyright 2013</copyright>
-        <tags>Octopus PowerShell</tags>
+        <tags>Octopus Scriptcs</tags>
         <dependencies>
         </dependencies>
     </metadata>
     <files>
-        <file src="DeployScripts\Example.Config.ps1" target="content\DeployScripts\Example.Config.ps1" />
-        <file src="DeployScripts\IISConfiguration.ps1" target="content\DeployScripts\IISConfiguration.ps1" />
-        <file src="DeployScripts\DoConfig.ps1" target="content\DeployScripts\DoConfig.ps1" />
-        <file src="DeployScripts\PreDeploy.ps1" target="content\PreDeploy.ps1" />
+        <file src="DeployScripts\example.config.json" target="content\DeployScripts\configs\example.config.ps1" />
+        <file src="DeployScripts\ConfigurationClasses.csx" target="content\DeployScripts\ExampleScript.csx" />
+        <file src="DeployScripts\DoConfig.csx" target="content\DeployScripts\DoConfig.csx" />
+        <file src="DeployScripts\PreDeploy.csx" target="content\PreDeploy.csx" />
         <file src="readme.txt" target="readme.txt" />
     </files>
 </package>
