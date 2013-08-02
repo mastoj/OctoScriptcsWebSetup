@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+    <metadata>
+        <id>OctoScriptcsWebSetup</id>
+        <version>$version$</version>
+        <authors>Tomas Jansson</authors>
+        <owners>Tomas Jansson</owners>
+        <projectUrl>https://github.com/mastoj/OctoScriptcsWebSetup</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>PowerShell setup scripts for IIS to use with Octopus</description>
+        <releaseNotes />
+        <copyright>Copyright 2013</copyright>
+        <tags>Octopus PowerShell</tags>
+        <dependencies>
+        </dependencies>
+    </metadata>
+    <files>
+        <file src="DeployScripts\Example.Config.ps1" target="content\DeployScripts\Example.Config.ps1" />
+        <file src="DeployScripts\IISConfiguration.ps1" target="content\DeployScripts\IISConfiguration.ps1" />
+        <file src="DeployScripts\DoConfig.ps1" target="content\DeployScripts\DoConfig.ps1" />
+        <file src="DeployScripts\PreDeploy.ps1" target="content\PreDeploy.ps1" />
+        <file src="readme.txt" target="readme.txt" />
+    </files>
+</package>

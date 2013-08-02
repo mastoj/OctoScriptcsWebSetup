@@ -4,6 +4,7 @@
 using System.Web.Script.Serialization;
 using Microsoft.Web.Administration;
 using System.Collections.Generic;
+using System.IO;
 
 public class AppPoolConfiguration
 {
@@ -26,29 +27,40 @@ public class AppPoolConfiguration
 	private Dictionary<string, Action<ApplicationPool >> IdentityModelConfigurations = 
 		new Dictionary<string, Action<ApplicationPool >>() {
 			{"SpecificUser", SetupSpecificUser},
+			{"LocalSystem", (applicationPool) => {SetupSystemIdentity(applicationPool, ProcessModelIdentityType.LocalSystem);}},
+			{"LocalService", (applicationPool) => {SetupSystemIdentity(applicationPool, ProcessModelIdentityType.LocalService);}},
+			{"NetworkService", (applicationPool) => {SetupSystemIdentity(applicationPool, ProcessModelIdentityType.NetworkService);}},
+			{"ApplicationPoolIdentity", (applicationPool) => {SetupSystemIdentity(applicationPool, ProcessModelIdentityType.ApplicationPoolIdentity);}},
 			{"", _ => {}}
 		};
+
+	private static void SetupSystemIdentity(ApplicationPool appPool, ProcessModelIdentityType identityScope)
+	{
+		appPool.ProcessModel.IdentityType = identityScope;
+		Console.WriteLine("Configuring {0} identity", identityScope);
+	}
 
 	private void SetupSpecificUser(ApplicationPool appPool)
 	{
 		appPool.ProcessModel.IdentityType = ProcessModelIdentityType.SpecificUser;
-		Console.WriteLine("Setting {0} as the user of the application pool");
+		Console.WriteLine("Setting {0} as the user of the application pool", UserName);
 		appPool.ProcessModel.Password = Password;
 		appPool.ProcessModel.UserName = UserName;
 	}	
 
 	public void DoSetup(ServerManager serverManager)
 	{
-		if(serverManager.ApplicationPools[AppPoolName] == null)
+		var appPool = serverManager.ApplicationPools[AppPoolName];
+		if(appPool == null)
 		{
 			Console.WriteLine("Adding application pool: " + AppPoolName + " " + IdentityMode + UserName + Password); 
-			var appPool = serverManager.ApplicationPools.Add(AppPoolName);
-			IdentityModelConfigurations[IdentityMode](appPool);
+			appPool = serverManager.ApplicationPools.Add(AppPoolName);
 		}
 		else
 		{
 			Console.WriteLine("Application pool exists: " + AppPoolName);
 		}	
+		IdentityModelConfigurations[IdentityMode](appPool);
 	}
 }
 
@@ -122,7 +134,8 @@ public class SiteBindingConfiguration
 
 	public void DoSetup(ServerManager serverManager, Site site)
 	{
-		site.Bindings.Add(BindingInformation, Protocol);		
+		Console.WriteLine("Adding binding: " + BindingInformation);
+		site.Bindings.Add(BindingInformation, Protocol);
 	}
 }
 
@@ -188,22 +201,25 @@ public static class Parser
 
 public static class IISSetup
 {
-	public static void SetupFromFile(string filePath)
+	public static SiteConfiguration SetupFromFile(string filePath)
 	{
 		var json = ReadFromFile(filePath);
-		SetupFromJson(json);
+		Console.WriteLine("Config read: ");
+		Console.WriteLine(json);
+		return SetupFromJson(json);
 	}
 
 	private static string ReadFromFile(string filePath)
 	{
-		return "";
+		return File.ReadAllText(filePath);
 	}
 
-	public static void SetupFromJson(string json)
+	public static SiteConfiguration SetupFromJson(string json)
 	{
 		var siteConfiguration = Parser.ParseJson(json);
 		var serverManager = new ServerManager();
 		siteConfiguration.DoSetup(serverManager);
 		serverManager.CommitChanges();
+		return siteConfiguration;
 	}
 }
