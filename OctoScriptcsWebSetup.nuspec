@@ -7,7 +7,7 @@
         <owners>Tomas Jansson</owners>
         <projectUrl>https://github.com/mastoj/OctoScriptcsWebSetup</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <description>PowerShell setup scripts for IIS to use with Octopus</description>
+        <description>Scriptcs setup scripts for IIS to use with Octopus</description>
         <releaseNotes />
         <copyright>Copyright 2013</copyright>
         <tags>Octopus PowerShell</tags>
