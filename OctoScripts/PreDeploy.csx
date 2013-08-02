@@ -1,1 +1,1 @@
-#load ".\DeployScriptcs\DoConfig.csx"
+#load ".\DeployScripts\DoConfig.csx"
